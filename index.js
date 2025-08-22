@@ -6,38 +6,37 @@ const URL = require("./models/url");
 const app = express();
 const PORT = process.env.PORT || 8000;
 
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-app.use(express.json()); // parse application/json
-app.use(express.urlencoded({ extended: true })); // (optional) for form posts
+// Health check
+app.get("/healthz", (req, res) => res.send("ok"));
 
 // Connect to DB
-connectDB().then(() => {
-  console.log("connected to DB");
-});
+connectDB()
+  .then(() => console.log("Connected to DB"))
+  .catch((err) => {
+    console.error("DB connection failed:", err);
+    process.exit(1); // fail fast so Render restarts
+  });
 
-// Mount router
 app.use("/url", urlRoute);
 
-// Redirect route
 app.get("/:id", async (req, res) => {
-  const id = req.params.id;
-  const entry = await URL.findOneAndUpdate(
-    { shortId: id }, // query by shortId
-    {
-      $push: {
-        visitHistory: { timestamp: Date.now() }, // <-- fixed
-      },
-    },
-    { new: true }
-  );
-
-  if (!entry) {
-    return res.status(404).send("URL not found");
+  try {
+    const id = req.params.id;
+    const entry = await URL.findOneAndUpdate(
+      { shortId: id },
+      { $push: { visitHistory: { timestamp: Date.now() } } },
+      { new: true }
+    );
+    if (!entry) return res.status(404).send("URL not found");
+    res.redirect(entry.redirectURL);
+  } catch (e) {
+    res.status(500).send("Server error");
   }
-
-  res.redirect(entry.redirectURL);
 });
 
-app.listen(PORT, () => {
-  console.log(`server started at http://localhost:${PORT}`);
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`Server started on port ${PORT}`);
 });

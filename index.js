@@ -2,6 +2,14 @@ const express = require("express");
 const { connectDB } = require("./connect");
 const urlRoute = require("./routes/url");
 const URL = require("./models/url");
+const cors = require('cors');
+
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type'],
+}));
+app.options('*', cors());   
 
 const app = express();
 const PORT = process.env.PORT || 8000;

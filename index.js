@@ -4,6 +4,8 @@ const urlRoute = require("./routes/url");
 const URL = require("./models/url");
 const cors = require('cors');
 
+const app = express();
+
 app.use(cors({
   origin: '*',
   methods: ['GET', 'POST', 'OPTIONS'],
@@ -11,7 +13,6 @@ app.use(cors({
 }));
 app.options('*', cors());   
 
-const app = express();
 const PORT = process.env.PORT || 8000;
 
 app.use(express.json());

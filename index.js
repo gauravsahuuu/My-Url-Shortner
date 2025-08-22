@@ -5,7 +5,6 @@ const URL = require("./models/url");
 const cors = require("cors");
 
 const app = express();
-const PORT = process.env.PORT || 8000;
 
 // CORS + parsers (before routes)
 app.use(cors({
@@ -13,21 +12,16 @@ app.use(cors({
   methods: ["GET", "POST", "OPTIONS"],
   allowedHeaders: ["Content-Type"],
 }));
-// app.options('*', cors()); // ❌ remove in Express 5
-
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Health check
 app.get("/healthz", (req, res) => res.send("ok"));
 
-// DB
+// Connect DB once on cold start (don't call process.exit in serverless)
 connectDB()
   .then(() => console.log("Connected to DB"))
-  .catch((err) => {
-    console.error("DB connection failed:", err);
-    process.exit(1);
-  });
+  .catch((err) => console.error("DB connection failed:", err));
 
 // Routes
 app.use("/url", urlRoute);
@@ -47,6 +41,6 @@ app.get("/:id", async (req, res) => {
   }
 });
 
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(`Server started on port ${PORT}`);
-});
+// ❗ Vercel: export the handler instead of app.listen(...)
+module.exports = app;                 // @vercel/node will use this as the request handler
+// or: module.exports = (req, res) => app(req, res);

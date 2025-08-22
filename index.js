@@ -5,26 +5,36 @@ const URL = require("./models/url");
 const cors = require("cors");
 
 const app = express();
+const PORT = process.env.PORT || 8000;
 
-// CORS + parsers
-app.use(cors({ origin: "*", methods: ["GET", "POST", "OPTIONS"], allowedHeaders: ["Content-Type"] }));
+// CORS + parsers (before routes)
+app.use(cors({
+  origin: "*",
+  methods: ["GET", "POST", "OPTIONS"],
+  allowedHeaders: ["Content-Type"],
+}));
+// app.options('*', cors()); // ❌ remove in Express 5
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Health
+// Health check
 app.get("/healthz", (req, res) => res.send("ok"));
 
-// Connect once on cold start (do not process.exit on failure)
-connectDB().then(() => console.log("DB ready")).catch(err => {
-  console.error("DB connect error:", err);
-});
+// DB
+connectDB()
+  .then(() => console.log("Connected to DB"))
+  .catch((err) => {
+    console.error("DB connection failed:", err);
+    process.exit(1);
+  });
 
-// API routes
+// Routes
 app.use("/url", urlRoute);
 
 app.get("/:id", async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id;
     const entry = await URL.findOneAndUpdate(
       { shortId: id },
       { $push: { visitHistory: { timestamp: Date.now() } } },
@@ -33,10 +43,10 @@ app.get("/:id", async (req, res) => {
     if (!entry) return res.status(404).send("URL not found");
     res.redirect(entry.redirectURL);
   } catch (e) {
-    console.error(e);
     res.status(500).send("Server error");
   }
 });
 
-// IMPORTANT: export handler for Vercel (@vercel/node)
-module.exports = (req, res) => app(req, res);
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`Server started on port ${PORT}`);
+});
